@@ -26,4 +26,15 @@ class ProfileRepository {
       throw Exception('Erreur lors de la récupération des profils: $e');
     }
   }
+
+  Future<void> updatePoints(String userId, int newPoints) async {
+    try {
+      await _supabase
+          .from('profiles')
+          .update({'points_balance': newPoints})
+          .eq('id', userId);
+    } catch (e) {
+      throw Exception('Erreur lors de la mise à jour des points: $e');
+    }
+  }
 }

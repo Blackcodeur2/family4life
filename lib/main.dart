@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'core/connectivity/connectivity_wrapper.dart';
 
 // TODO: remplace ces constantes par tes vraies valeurs Supabase
 const String supabaseUrl = 'https://uhhhfqpceamkufuzpdwj.supabase.co';
@@ -14,10 +15,7 @@ const String supabaseAnonKey = 'sb_publishable_hsR88cgeBUpBv76NkcE9KQ_xeSYeGVR';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
-  );
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
 
   await initializeDateFormatting('fr_FR', null);
 
@@ -32,15 +30,18 @@ class Family4LifeApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    return MaterialApp.router
-      // Material 3 + light/dark
-      (
-      title: 'Family4Life',
-      debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      routerConfig: router,
+    return ConnectivityWrapper(
+      child:
+          MaterialApp.router
+          // Material 3 + light/dark
+          (
+            title: 'Family4Life',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeMode,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            routerConfig: router,
+          ),
     );
   }
 }

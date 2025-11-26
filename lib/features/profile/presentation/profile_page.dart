@@ -11,15 +11,15 @@ import '../../auth/domain/models/user_profile.dart';
 final currentUserProfileProvider = FutureProvider<UserProfile?>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
-  
+
   if (user == null) return null;
-  
+
   final response = await supabase
       .from('profiles')
       .select()
       .eq('id', user.id)
       .single();
-  
+
   return UserProfile.fromJson(response as Map<String, dynamic>);
 });
 
@@ -42,34 +42,52 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         maxHeight: 512,
         imageQuality: 75,
       );
-      
+
       if (image == null) return;
 
-      // Vérifier le type de fichier via mimeType
+      // Vérifier le type de fichier via mimeType ou extension
       final String? mimeType = image.mimeType;
-      final List<String> allowedMimeTypes = ['image/png', 'image/jpg', 'image/jpeg'];
-      
-      if (mimeType == null || !allowedMimeTypes.contains(mimeType.toLowerCase())) {
+      final String extension = image.path.split('.').last.toLowerCase();
+      final List<String> allowedMimeTypes = [
+        'image/png',
+        'image/jpg',
+        'image/jpeg',
+      ];
+      final List<String> allowedExtensions = ['png', 'jpg', 'jpeg'];
+
+      bool isValid = false;
+      if (mimeType != null &&
+          allowedMimeTypes.contains(mimeType.toLowerCase())) {
+        isValid = true;
+      } else if (allowedExtensions.contains(extension)) {
+        isValid = true;
+      }
+
+      if (!isValid) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Format non autorisé. Veuillez sélectionner une image PNG, JPG ou JPEG.'),
+            content: Text(
+              'Format non autorisé. Veuillez sélectionner une image PNG, JPG ou JPEG.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
-      
+
       // Vérifier la taille du fichier (5MB = 5 * 1024 * 1024 bytes)
       final Uint8List bytes = await image.readAsBytes();
       final int fileSizeInBytes = bytes.length;
       final double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
-      
+
       if (fileSizeInMB > 5) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Image trop volumineuse (${fileSizeInMB.toStringAsFixed(1)} MB). La taille maximale est de 5 MB.'),
+            content: Text(
+              'Image trop volumineuse (${fileSizeInMB.toStringAsFixed(1)} MB). La taille maximale est de 5 MB.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -82,29 +100,32 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final userId = supabase.auth.currentUser!.id;
       final fileExt = image.path.split('.').last;
       final filePath = '$userId/avatar.$fileExt';
-      
+
       // Upload l'image
-      await supabase.storage.from('avatars').uploadBinary(
-        filePath,
-        bytes,
-        fileOptions: const FileOptions(
-          upsert: true,
-          contentType: 'image/jpeg',
-        ),
-      );
-      
+      await supabase.storage
+          .from('avatars')
+          .uploadBinary(
+            filePath,
+            bytes,
+            fileOptions: const FileOptions(
+              upsert: true,
+              contentType: 'image/jpeg',
+            ),
+          );
+
       final avatarUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
-      
+
       // Mettre à jour le profil
-      await supabase.from('profiles').update({
-        'avatar_url': avatarUrl,
-      }).eq('id', userId);
+      await supabase
+          .from('profiles')
+          .update({'avatar_url': avatarUrl})
+          .eq('id', userId);
 
       if (!mounted) return;
-      
+
       // Rafraîchir le provider
       ref.invalidate(currentUserProfileProvider);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Photo de profil mise à jour !'),
@@ -114,10 +135,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -130,10 +148,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final supabase = Supabase.instance.client;
     await supabase.auth.signOut();
     if (!mounted) return;
-    
+
     // Invalider le cache du profil
     ref.invalidate(currentUserProfileProvider);
-    
+
     context.goNamed('login');
   }
 
@@ -256,8 +274,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       value: profile.gender == 'M'
                           ? 'Homme'
                           : profile.gender == 'F'
-                              ? 'Femme'
-                              : 'Non renseigné',
+                          ? 'Femme'
+                          : 'Non renseigné',
                     ),
                   ],
                 ),
@@ -280,9 +298,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Text('Erreur: $err'),
-        ),
+        error: (err, stack) => Center(child: Text('Erreur: $err')),
       ),
     );
   }
@@ -302,9 +318,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       ),
     );
   }
@@ -319,11 +333,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 24,
-            color: theme.colorScheme.primary,
-          ),
+          Icon(icon, size: 24, color: theme.colorScheme.primary),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
